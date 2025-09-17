@@ -10,10 +10,10 @@ DEFAULT_AGENT_NAME="$(hostname)"
 
 # 1. Detect CPU architecture
 ARCH=$(uname -m)
-if [[ "$ARCH" == "arm64" ]]; then
-    AGENT_ARCH="osx-arm64"
+if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then
+    AGENT_ARCH="linux-arm64"
 else
-    AGENT_ARCH="osx-x64"
+    AGENT_ARCH="linux-x64"
 fi
 
 # 2. Fetch latest agent version
@@ -23,20 +23,25 @@ if [ -z "$LATEST_VERSION" ]; then
     exit 1
 fi
 AGENT_PKG="vsts-agent-${AGENT_ARCH}-${LATEST_VERSION}.tar.gz"
-AGENT_PKG_URL="https://download.agent.dev.azure.com/agent/${LATEST_VERSION}/${AGENT_PKG}"
+AGENT_PKG_URL="https://vstsagentpackage.azureedge.net/agent/${LATEST_VERSION}/${AGENT_PKG}"
 
 # 3. Install dependencies
-command -v curl >/dev/null 2>&1 || { echo "curl not found, installing..."; brew install curl; }
-command -v tar >/dev/null 2>&1 || { echo "tar not found, installing..."; brew install tar; }
+REQUIRED_PKGS=(curl tar git libicu60 libkrb5-3 libssl1.1 apt-transport-https ca-certificates gnupg lsb-release)
+MISSING_PKGS=()
+for PKG in "${REQUIRED_PKGS[@]}"; do
+    dpkg -s $PKG &>/dev/null || MISSING_PKGS+=($PKG)
+done
+if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
+    echo "Installing missing dependencies: ${MISSING_PKGS[@]}"
+    sudo apt-get update
+    sudo apt-get install -y "${MISSING_PKGS[@]}"
+fi
 
 # 4. Download agent package
 if [ ! -f "$AGENT_PKG" ]; then
     echo "Downloading Azure DevOps agent package: $AGENT_PKG_URL"
     curl -O $AGENT_PKG_URL
 fi
-
-# 4.1 Clear extended attributes to avoid macOS Gatekeeper errors
-xattr -c "$AGENT_PKG"
 
 # 5. Extract package
 AGENT_DIR="ado-agent"
@@ -46,8 +51,8 @@ cd $AGENT_DIR
 tar zxvf ../$AGENT_PKG
 
 # 6. Configure agent
-ORG_URL="${AZP_URL:-${DEFAULT_ORG_URL}}"  # Azure DevOps org URL
-PAT="${AZP_TOKEN:-${DEFAULT_PAT}}"         # Personal Access Token
+ORG_URL="${AZP_URL:-${DEFAULT_ORG_URL}}"
+PAT="${AZP_TOKEN:-${DEFAULT_PAT}}"
 POOL="${AZP_POOL:-${DEFAULT_POOL}}"
 AGENT_NAME="${AZP_AGENT_NAME:-${DEFAULT_AGENT_NAME}}"
 
@@ -82,4 +87,4 @@ sudo ./svc.sh install
 # 8. Start the service
 sudo ./svc.sh start
 
-echo "Azure DevOps agent installed and started as a service."
+echo "Azure DevOps agent installed and started as a service on Ubuntu."
