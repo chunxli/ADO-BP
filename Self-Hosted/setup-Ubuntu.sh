@@ -23,7 +23,7 @@ if [ -z "$LATEST_VERSION" ]; then
     exit 1
 fi
 AGENT_PKG="vsts-agent-${AGENT_ARCH}-${LATEST_VERSION}.tar.gz"
-AGENT_PKG_URL="https://vstsagentpackage.azureedge.net/agent/${LATEST_VERSION}/${AGENT_PKG}"
+AGENT_PKG_URL="https://download.agent.dev.azure.com/agent/${LATEST_VERSION}/${AGENT_PKG}"
 
 # 3. Install dependencies
 REQUIRED_PKGS=(curl tar git libicu60 libkrb5-3 libssl1.1 apt-transport-https ca-certificates gnupg lsb-release)
